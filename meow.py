@@ -23,6 +23,8 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 from rich.live import Live
 
+MEOW_STRING = "[bright_red]M[/bright_red][bright_yellow]e[/bright_yellow][bright_green]o[/bright_green][bright_blue]w[/bright_blue]"
+
 
 @click.group()
 def cli():
@@ -75,7 +77,7 @@ class MeowChat:
         self.reset_history()
 
     def get_system_prompt(self) -> str:
-        return f"""You are an AI assistant, you use semi-formal language and are generally quite concise.
+        return f"""You are an AI assistant called Meow, you use semi-formal language and are generally quite concise.
         Your user is an experienced computer programmer.
 
         The current date is: {datetime.now().strftime("%Y-%m-%d")}
@@ -108,18 +110,18 @@ class MeowChat:
             pyperclip.copy(code_blocks[-1])
             self.console.print("Copied last code block to clipboard")
 
-    def command_quit(self) -> None:
-        """
-        Quit the application
-        """
-        sys.exit(0)
-
     def command_reset(self) -> None:
         """
         Start a new chat context
         """
         self.console.rule("Reset")
         self.reset_history()
+
+    def command_quit(self) -> None:
+        """
+        Quit the application
+        """
+        sys.exit(0)
 
     def get_commands(self) -> Iterator[Tuple[str, str, str, Callable[[], None]]]:
         """
@@ -128,7 +130,7 @@ class MeowChat:
         for method, fn in vars(self.__class__).items():
             if method.startswith("command_"):
                 shortcut = "".join(c[0] for c in method.split("_")[1:])
-                yield shortcut, " ".join(method.split("_")).capitalize(), fn.__doc__.strip(), fn
+                yield shortcut, " ".join(method.split("_")[1:]).capitalize(), fn.__doc__.strip(), fn
 
     def run_command(self, command: str) -> None:
         """
@@ -146,7 +148,7 @@ class MeowChat:
         """
         Show this help
         """
-        self.console.print("[bold]Meow commands[/bold]")
+        self.console.print(f"[bold]{MEOW_STRING} commands[/bold]")
 
         for shortcut, name, help, _ in self.get_commands():
             self.console.print(f"[bold]\\{shortcut}[/bold] - {name}: {help}")
@@ -175,7 +177,7 @@ class MeowChat:
         """
 
         self.console.print(
-            "[bold]Welcome to Meow. \\q to quit, \\h for help. meta-enter to submit (option-enter on OSX)[/bold]"
+            f"[bold]Welcome to {MEOW_STRING}. \\q to quit, \\h for help. meta-enter to submit (option-enter on OSX)[/bold]"
         )
 
         ptk_history = InMemoryHistory()
