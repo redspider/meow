@@ -1,6 +1,8 @@
 """
 Meow is a simple cli interface to OpenAI LLMs
 """
+import os
+import sys
 from datetime import datetime
 
 import click
@@ -35,11 +37,10 @@ def get_api_key() -> str:
     """
     Obtain and return the OpenAI API key
     """
-    api_key = keyring.get_password("meow", "openai_api_key")
+    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        rich.print("No OpenAI API key found in keyring")
-        api_key = rich.console.Console().input("Please paste your OpenAI API key: ", password=True)
-        keyring.set_password("meow", "openai_api_key", api_key)
+        rich.print("No OpenAI API key found in environment, please put it in the OPENAI_API_KEY environment variable")
+        sys.exit(1)
     return api_key
 
 def extract_code_blocks(s: str) -> list[str]:
