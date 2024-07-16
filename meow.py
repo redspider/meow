@@ -6,6 +6,7 @@ from datetime import datetime
 import click
 import keyring
 import openai
+import pyperclip
 import rich
 from prompt_toolkit import prompt
 from prompt_toolkit.history import InMemoryHistory
@@ -40,6 +41,26 @@ def get_api_key() -> str:
         api_key = rich.console.Console().input("Please paste your OpenAI API key: ", password=True)
         keyring.set_password("meow", "openai_api_key", api_key)
     return api_key
+
+def extract_code_blocks(s: str) -> list[str]:
+    """
+    Find all the code blocks in the provided markdown string (if any)
+    """
+    output: list[str] = []
+    current = None
+    lines = s.split("\n")
+    for l in lines:
+        if current is None:
+            if l.startswith("```"):
+                current = ""
+        else:
+            if l == "```":
+                output.append(current)
+                current = None
+            else:
+                current += l + "\n"
+
+    return output
 
 @cli.command("chat")
 @click.option("--model", "-m", default="gpt-4o", type=click.Choice(MODELS), help="The model to use")
@@ -107,6 +128,8 @@ def chat(
                 console.print(
                     """[bold]Meow commands[/bold]
 [bold]\\h[/bold] Help
+[bold]\\c[/bold] Copy the last response to the clipboard
+[bold]\\cc[/bold] Copy the last code block to the clipboard
 [bold]\\r[/bold] Reset
 [bold]\\m[/bold] Switch model
 [bold]\\q[/bold] Quit
@@ -116,6 +139,18 @@ def chat(
             elif user_message == "\\m":
                 # rotate to the next model in the MODELS list
                 model = MODELS[(MODELS.index(model) + 1) % len(MODELS)]
+                continue
+            elif user_message == "\c":
+                pyperclip.copy(history[-1]["content"])
+                console.print("Copied last response to clipboard")
+                continue
+            elif user_message == "\\cc":
+                code_blocks = extract_code_blocks(history[-1]["content"])
+                if not code_blocks:
+                    console.print("No code blocks found in last message")
+                    continue
+                pyperclip.copy(code_blocks[-1])
+                console.print("Copied last code block to clipboard")
                 continue
 
             history.append({
