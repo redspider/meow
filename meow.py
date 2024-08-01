@@ -22,6 +22,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 from rich.live import Live
+from rich.markdown import Markdown
 
 MEOW_STRING = "[bright_red]M[/bright_red][bright_yellow]e[/bright_yellow][bright_green]o[/bright_green][bright_blue]w[/bright_blue]"
 
@@ -136,11 +137,13 @@ class MeowChat:
         """
         for method, fn in vars(self.__class__).items():
             if method.startswith("command_"):
-                shortcut = "".join(c[0] for c in method.split("_")[1:])
-                long = "_".join(c for c in method.split("_")[1:])
-                yield shortcut, " ".join(method.split("_")[1:]).capitalize(), fn.__doc__.strip(), fn
+                words = method.split("_")[1:]
+                shortcut = "".join(c[0] for c in words)
+                long = "_".join(c for c in words)
+                name = " ".join(words).capitalize()
+                yield shortcut, name, fn.__doc__.strip(), fn
                 if with_long:
-                    yield long, " ".join(method.split("_")[1:]).capitalize(), fn.__doc__.strip(), fn
+                    yield long, name, fn.__doc__.strip(), fn
 
 
     def run_command(self, command: str) -> None:
@@ -226,7 +229,7 @@ class MeowChat:
                         delta_content = chunk.choices[0].delta.content
                         if delta_content:
                             aggregated_result += delta_content
-                            live.update(aggregated_result)
+                            live.update(Markdown(aggregated_result))
 
                     # Add the result to the history
                     self.history.append({"role": "assistant", "content": aggregated_result})
