@@ -110,6 +110,13 @@ class MeowChat:
             pyperclip.copy(code_blocks[-1])
             self.console.print("Copied last code block to clipboard")
 
+    def command_dump(self) -> None:
+        """
+        Dump the conversation to screen raw with no formatting
+        """
+        for message in self.history:
+            self.console.print(f'<{message["role"]}>\n{message["content"]}\n</{message["role"]}>', markup=False)
+
     def command_reset(self) -> None:
         """
         Start a new chat context
@@ -123,14 +130,18 @@ class MeowChat:
         """
         sys.exit(0)
 
-    def get_commands(self) -> Iterator[Tuple[str, str, str, Callable[[], None]]]:
+    def get_commands(self, with_long=False) -> Iterator[Tuple[str, str, str, Callable[[], None]]]:
         """
         Retrieve all the commands in this class
         """
         for method, fn in vars(self.__class__).items():
             if method.startswith("command_"):
                 shortcut = "".join(c[0] for c in method.split("_")[1:])
+                long = "_".join(c for c in method.split("_")[1:])
                 yield shortcut, " ".join(method.split("_")[1:]).capitalize(), fn.__doc__.strip(), fn
+                if with_long:
+                    yield long, " ".join(method.split("_")[1:]).capitalize(), fn.__doc__.strip(), fn
+
 
     def run_command(self, command: str) -> None:
         """
@@ -138,7 +149,7 @@ class MeowChat:
         :param command:
         :return:
         """
-        for shortcut, _, _, fn in self.get_commands():
+        for shortcut, _, _, fn in self.get_commands(with_long=True):
             if shortcut == command:
                 fn(self)
                 return
