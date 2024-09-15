@@ -32,7 +32,7 @@ def cli():
     pass
 
 
-MODELS = ["gpt-4o", "gpt-4-turbo"]
+MODELS = ["gpt-4o", "gpt-4-turbo", "o1-mini", "o1-preview"]
 
 
 def extract_code_blocks(s: str) -> list[str]:
@@ -86,6 +86,16 @@ class MeowChat:
 
     def reset_history(self) -> None:
         self.history = [{"role": "system", "content": self.get_system_prompt()}]
+
+    def history_with_no_system_prompt(self) -> list[ChatCompletionSystemMessageParam | ChatCompletionUserMessageParam | ChatCompletionAssistantMessageParam
+    ]:
+        results = []
+        for message in self.history:
+            item = dict(**message)
+            if item["role"] == "system":
+                item["role"] = "user"
+            results.append(item)
+        return results
 
     def command_model(self) -> None:
         """
@@ -219,20 +229,30 @@ class MeowChat:
                 self.history.append({"role": "user", "content": user_message})
 
                 # Stream the completion
-                with Live("", console=self.console, auto_refresh=True, refresh_per_second=10) as live:
-                    aggregated_result = ""
-                    for chunk in self.client.chat.completions.create(
-                        model=self.model,
-                        messages=self.history,
-                        stream=True,
-                    ):
-                        delta_content = chunk.choices[0].delta.content
-                        if delta_content:
-                            aggregated_result += delta_content
-                            live.update(Markdown(aggregated_result))
+                aggregated_result = ""
 
-                    # Add the result to the history
-                    self.history.append({"role": "assistant", "content": aggregated_result})
+                if self.model in ["o1-preview", "o1-mini"]:
+                    with self.console.status("Thinking"):
+                        completion = self.client.chat.completions.create(
+                            model=self.model,
+                            messages=self.history_with_no_system_prompt(),
+                        )
+                        aggregated_result = completion.choices[0].message.content
+                        self.console.print(Markdown(aggregated_result))
+                else:
+                    with Live("", console=self.console, auto_refresh=True, refresh_per_second=10) as live:
+                        for chunk in self.client.chat.completions.create(
+                            model=self.model,
+                            messages=self.history,
+                            stream=True,
+                        ):
+                            delta_content = chunk.choices[0].delta.content
+                            if delta_content:
+                                aggregated_result += delta_content
+                                live.update(Markdown(aggregated_result))
+
+                # Add the result to the history
+                self.history.append({"role": "assistant", "content": aggregated_result})
                 self.console.print("")
             except KeyboardInterrupt:
                 self.console.print("[bright_red]Interrupted[/bright_red]")
